@@ -1,0 +1,65 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+:root {
+  --ink: #14213d;
+  --muted: #64748b;
+  --line: #e5e7eb;
+  --canvas: #f7f8fc;
+  --paper: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+}
+
+button, select { font: inherit; }
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.main-pane { padding: 28px clamp(20px, 5vw, 72px); }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 36px; }
+.brand { font-family: "Space Grotesk", sans-serif; font-size: 24px; font-weight: 700; }
+.brand span { color: #6558f5; }
+.status { color: var(--muted); font-size: 13px; }
+.status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #35b77b; }
+.hero { max-width: 760px; margin: 0 auto 24px; }
+.eyebrow { color: #6558f5; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h1 { margin: 8px 0; font-family: "Space Grotesk", sans-serif; font-size: clamp(30px, 4vw, 48px); line-height: 1.05; }
+.subtitle { margin: 0; color: var(--muted); line-height: 1.6; }
+.editor-card { max-width: 760px; margin: 28px auto 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 18px 50px #24304d0d; }
+.editor-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.toolbar-label { color: var(--muted); font-size: 13px; }
+.tone-select { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--ink); background: white; }
+.editor-content { min-height: 390px; padding: 28px; outline: none; font-size: 18px; line-height: 1.8; }
+.editor-content p { margin: 0 0 18px; }
+.editor-content p:last-child { margin-bottom: 0; }
+.editor-content .suggestion-correctness { text-decoration: underline wavy #ef4444 2px; text-underline-offset: 4px; background: #ef444414; }
+.editor-content .suggestion-clarity { text-decoration: underline wavy #3b82f6 2px; text-underline-offset: 4px; background: #3b82f614; }
+.editor-content .suggestion-engagement { text-decoration: underline wavy #22a06b 2px; text-underline-offset: 4px; background: #22a06b14; }
+.editor-content .suggestion-delivery { text-decoration: underline wavy #8b5cf6 2px; text-underline-offset: 4px; background: #8b5cf614; }
+.editor-footer { display: flex; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.sidebar { padding: 104px 28px 28px; border-left: 1px solid var(--line); background: #fff; }
+.sidebar h2 { margin: 0 0 6px; font-family: "Space Grotesk", sans-serif; font-size: 20px; }
+.sidebar-copy { margin: 0 0 24px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.legend { display: grid; gap: 10px; margin-bottom: 30px; }
+.legend-item { display: flex; align-items: center; gap: 9px; color: #475569; font-size: 13px; }
+.legend-swatch { width: 18px; height: 3px; border-radius: 4px; }
+.suggestion-list { display: grid; gap: 12px; }
+.suggestion-card { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcff; }
+.suggestion-card-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.category { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.category-correctness { color: #dc2626; }.category-clarity { color: #2563eb; }.category-engagement { color: #168653; }.category-delivery { color: #7c3aed; }
+.legend-swatch.category-correctness { background: #ef4444; }.legend-swatch.category-clarity { background: #3b82f6; }.legend-swatch.category-engagement { background: #22a06b; }.legend-swatch.category-delivery { background: #8b5cf6; }
+.suggestion-original { margin: 0 0 5px; font-weight: 600; }
+.suggestion-explanation { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.empty-state { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+@media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .sidebar { padding: 28px 20px; border-top: 1px solid var(--line); border-left: 0; } .main-pane { padding: 24px 20px; } }
