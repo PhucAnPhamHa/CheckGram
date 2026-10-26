@@ -3,10 +3,25 @@ import type { Suggestion } from "./contracts.js";
 import { isSuggestionInText } from "./contracts.js";
 import { analyzeWithLanguageTool } from "./providers/languagetool.js";
 import { analyzeWithOpenAI } from "./providers/openai.js";
+import type { SuggestionCache } from "./cache.js";
 
 export interface AnalyzerDependencies {
   languageTool?: typeof analyzeWithLanguageTool;
   openAI?: typeof analyzeWithOpenAI;
+}
+
+export async function analyzeTextCached(
+  text: string,
+  tone: string,
+  config: Config,
+  cache: SuggestionCache,
+  dependencies: AnalyzerDependencies = {}
+): Promise<{ suggestions: Suggestion[]; cached: boolean }> {
+  const cachedSuggestions = await cache.get(text, tone);
+  if (cachedSuggestions) return { suggestions: cachedSuggestions, cached: true };
+  const suggestions = await analyzeText(text, tone, config, dependencies);
+  await cache.set(text, tone, suggestions);
+  return { suggestions, cached: false };
 }
 
 export interface AnalysisBlock {

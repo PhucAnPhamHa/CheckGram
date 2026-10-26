@@ -3,11 +3,14 @@ import cors from "@fastify/cors";
 import { loadConfig } from "./config.js";
 import { analyzeRequestSchema, rewriteRequestSchema } from "./contracts.js";
 import { analyzeText, splitIntoAnalysisBlocks } from "./analyzer.js";
+import { analyzeTextCached } from "./analyzer.js";
 import { rewriteWithOpenAI } from "./providers/openai.js";
+import { SuggestionCache } from "./cache.js";
 
 export function buildServer() {
   const config = loadConfig();
   const app = Fastify({ logger: true });
+  const suggestionCache = new SuggestionCache(config, console);
 
   app.register(cors, { origin: true });
 
@@ -20,8 +23,8 @@ export function buildServer() {
     }
 
     try {
-      const suggestions = await analyzeText(parsed.data.text, parsed.data.tone, config);
-      return reply.send({ suggestions });
+      const result = await analyzeTextCached(parsed.data.text, parsed.data.tone, config, suggestionCache);
+      return reply.send({ suggestions: result.suggestions, cached: result.cached });
     } catch (error) {
       request.log.error(error);
       return reply.code(502).send({ error: "Text analysis provider unavailable" });
@@ -56,7 +59,8 @@ export function buildServer() {
     try {
       for (const block of blocks) {
         if (response.destroyed) return;
-        const blockSuggestions = await analyzeText(block.text, parsed.data.tone, config);
+        const result = await analyzeTextCached(block.text, parsed.data.tone, config, suggestionCache);
+        const blockSuggestions = result.suggestions;
         const suggestions = blockSuggestions.map((suggestion) => ({
           ...suggestion,
           startOffset: suggestion.startOffset + block.startOffset,
@@ -64,9 +68,14 @@ export function buildServer() {
         }));
         writeEvent("suggestions.block", {
           blockIndex: block.blockIndex,
+          cached: result.cached,
           startOffset: block.startOffset,
           endOffset: block.startOffset + block.text.length,
           suggestions
+        });
+
+        app.addHook("onClose", async () => {
+          await suggestionCache.close();
         });
       }
       writeEvent("analysis.completed", { blockCount: blocks.length });

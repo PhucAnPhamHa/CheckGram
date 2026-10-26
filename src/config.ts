@@ -7,7 +7,9 @@ const envSchema = z.object({
   LANGUAGETOOL_LANGUAGE: z.string().default("en-US"),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15000)
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  REDIS_URL: z.string().url().optional(),
+  REDIS_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(3600)
 });
 
 export type Config = z.infer<typeof envSchema>;
