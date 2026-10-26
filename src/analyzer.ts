@@ -9,6 +9,32 @@ export interface AnalyzerDependencies {
   openAI?: typeof analyzeWithOpenAI;
 }
 
+export interface AnalysisBlock {
+  blockIndex: number;
+  startOffset: number;
+  text: string;
+}
+
+export function splitIntoAnalysisBlocks(text: string, maxBlockLength = 1_200): AnalysisBlock[] {
+  const blocks: AnalysisBlock[] = [];
+  const paragraphPattern = /\S[\s\S]*?(?=\n{2,}|\s*$)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = paragraphPattern.exec(text)) !== null) {
+    const paragraph = match[0];
+    const paragraphStart = match.index;
+    for (let offset = 0; offset < paragraph.length; offset += maxBlockLength) {
+      blocks.push({
+        blockIndex: blocks.length,
+        startOffset: paragraphStart + offset,
+        text: paragraph.slice(offset, offset + maxBlockLength)
+      });
+    }
+  }
+
+  return blocks;
+}
+
 export async function analyzeText(
   text: string,
   tone: string,

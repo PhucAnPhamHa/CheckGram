@@ -17,9 +17,11 @@ export function WritingWorkspace() {
   const [suggestions, setSuggestions] = useState<EditorSuggestion[]>([]);
   const [status, setStatus] = useState("Ready to write");
   const requestId = useRef(0);
+  const analysisController = useRef<AbortController | null>(null);
   const editorRef = useRef<TiptapEditorHandle>(null);
 
   useEffect(() => {
+    analysisController.current?.abort();
     if (!text.trim()) {
       setSuggestions([]);
       setStatus("Ready to write");
@@ -29,24 +31,61 @@ export function WritingWorkspace() {
     const currentRequestId = ++requestId.current;
     setStatus("Checking your writing...");
     const timer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      analysisController.current = controller;
+      let receivedSuggestions = 0;
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/analyze`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/analyze/stream`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text, tone })
+          body: JSON.stringify({ text, tone }),
+          signal: controller.signal
         });
-        if (!response.ok) throw new Error("Analysis failed");
-        const payload = await response.json() as { suggestions: EditorSuggestion[] };
-        if (currentRequestId === requestId.current) {
-          setSuggestions(payload.suggestions);
-          setStatus(payload.suggestions.length ? `${payload.suggestions.length} suggestions found` : "Looks good");
+        if (!response.ok || !response.body) throw new Error("Analysis stream failed");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const consumeEvent = (rawEvent: string) => {
+          const eventName = rawEvent.match(/^event:\s*(.+)$/m)?.[1];
+          const dataLine = rawEvent.match(/^data:\s*(.+)$/m)?.[1];
+          if (!eventName || !dataLine || currentRequestId !== requestId.current) return;
+          const data = JSON.parse(dataLine) as {
+            suggestions?: EditorSuggestion[];
+            blockIndex?: number;
+            blockCount?: number;
+          };
+          if (eventName === "analysis.started") {
+            setStatus(`Checking ${data.blockCount ?? 0} blocks...`);
+          } else if (eventName === "suggestions.block") {
+            const incoming = data.suggestions ?? [];
+            receivedSuggestions += incoming.length;
+            setSuggestions((current) => [...current, ...incoming]);
+            setStatus(`Checking block ${(data.blockIndex ?? 0) + 1}... ${receivedSuggestions} found`);
+          } else if (eventName === "analysis.completed") {
+            setStatus(receivedSuggestions ? `${receivedSuggestions} suggestions found` : "Looks good");
+          } else if (eventName === "analysis.failed") {
+            setStatus("Analysis unavailable");
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? "";
+          events.forEach(consumeEvent);
+          if (done) break;
         }
       } catch {
-        if (currentRequestId === requestId.current) setStatus("Analysis unavailable");
+        if (!controller.signal.aborted && currentRequestId === requestId.current) setStatus("Analysis unavailable");
       }
     }, 500);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      analysisController.current?.abort();
+    };
   }, [text, tone]);
 
   const groupedSuggestions = useMemo(() => (

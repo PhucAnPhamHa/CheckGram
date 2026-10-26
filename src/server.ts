@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { loadConfig } from "./config.js";
 import { analyzeRequestSchema, rewriteRequestSchema } from "./contracts.js";
-import { analyzeText } from "./analyzer.js";
+import { analyzeText, splitIntoAnalysisBlocks } from "./analyzer.js";
 import { rewriteWithOpenAI } from "./providers/openai.js";
 
 export function buildServer() {
@@ -25,6 +25,56 @@ export function buildServer() {
     } catch (error) {
       request.log.error(error);
       return reply.code(502).send({ error: "Text analysis provider unavailable" });
+    }
+  });
+
+  app.post("/api/v1/analyze/stream", async (request, reply) => {
+    const parsed = analyzeRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+
+    reply.hijack();
+    const response = reply.raw;
+    response.writeHead(200, {
+      "cache-control": "no-cache, no-transform",
+      connection: "keep-alive",
+      "content-type": "text/event-stream; charset=utf-8",
+      "x-accel-buffering": "no"
+    });
+
+    const writeEvent = (event: string, data: unknown) => {
+      response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const blocks = splitIntoAnalysisBlocks(parsed.data.text);
+    writeEvent("analysis.started", {
+      blockCount: blocks.length,
+      textLength: parsed.data.text.length
+    });
+
+    try {
+      for (const block of blocks) {
+        if (response.destroyed) return;
+        const blockSuggestions = await analyzeText(block.text, parsed.data.tone, config);
+        const suggestions = blockSuggestions.map((suggestion) => ({
+          ...suggestion,
+          startOffset: suggestion.startOffset + block.startOffset,
+          endOffset: suggestion.endOffset + block.startOffset
+        }));
+        writeEvent("suggestions.block", {
+          blockIndex: block.blockIndex,
+          startOffset: block.startOffset,
+          endOffset: block.startOffset + block.text.length,
+          suggestions
+        });
+      }
+      writeEvent("analysis.completed", { blockCount: blocks.length });
+    } catch (error) {
+      request.log.error(error);
+      writeEvent("analysis.failed", { error: "Text analysis provider unavailable" });
+    } finally {
+      response.end();
     }
   });
 

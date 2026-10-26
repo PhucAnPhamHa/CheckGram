@@ -71,3 +71,27 @@ Response:
 ```
 
 The rewrite route returns `503` when `OPENAI_API_KEY` is not configured and `502` when the provider fails.
+
+## Streaming analysis
+
+Long documents can be analyzed incrementally with the SSE endpoint:
+
+```http
+POST /api/v1/analyze/stream
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "text": "A long document...",
+  "tone": "Professional"
+}
+```
+
+The endpoint emits `analysis.started`, one `suggestions.block` event per paragraph-sized block, and then `analysis.completed`:
+
+```text
+event: suggestions.block
+data: {"blockIndex":0,"startOffset":0,"endOffset":1200,"suggestions":[...]}
+```
+
+Offsets in each block event remain offsets into the original full document. The frontend uses `fetch()` with an `AbortController` so a new edit cancels the previous stream and partial results from an older version cannot be applied.
