@@ -29,7 +29,9 @@ export interface TiptapEditorHandle {
 
 interface TiptapEditorProps {
   suggestions: EditorSuggestion[];
-  onTextChange: (text: string) => void;
+  onTextChange?: (text: string) => void;
+  onJsonChange?: (content: Record<string, unknown>, plainText: string) => void;
+  initialContent?: Record<string, unknown>;
 }
 
 interface RewriteVariation {
@@ -38,7 +40,7 @@ interface RewriteVariation {
 }
 
 export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
-  function TiptapEditor({ suggestions, onTextChange }, ref) {
+  function TiptapEditor({ suggestions, onTextChange, onJsonChange, initialContent }, ref) {
     const editor = useEditor({
       immediatelyRender: false,
       extensions: [
@@ -46,9 +48,13 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
         Placeholder.configure({ placeholder: "Start writing your thoughts..." }),
         SuggestionDecoration.configure({ suggestions })
       ],
-      content: "<p>Writing is a skill that gets stronger with every thoughtful sentence. Try adding an idea and CheckGram will help you make it clearer, more engaging, and more confident.</p>",
+      content: initialContent ?? "<p>Writing is a skill that gets stronger with every thoughtful sentence. Try adding an idea and CheckGram will help you make it clearer, more engaging, and more confident.</p>",
       editorProps: { attributes: { class: "editor-content" } },
-      onUpdate: ({ editor: currentEditor }) => onTextChange(currentEditor.getText({ blockSeparator: "\n" }))
+      onUpdate: ({ editor: currentEditor }) => {
+        const plainText = currentEditor.getText({ blockSeparator: "\n" });
+        onTextChange?.(plainText);
+        onJsonChange?.(currentEditor.getJSON() as unknown as Record<string, unknown>, plainText);
+      }
     });
 
     const editorShellRef = useRef<HTMLDivElement | null>(null);
