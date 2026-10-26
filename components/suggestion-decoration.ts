@@ -12,9 +12,13 @@ export interface EditorSuggestion {
   source: "languagetool" | "openai";
 }
 
+export function suggestionKey(suggestion: EditorSuggestion): string {
+  return `${suggestion.startOffset}:${suggestion.endOffset}:${suggestion.suggestionType}`;
+}
+
 export const suggestionPluginKey = new PluginKey<DecorationSet>("checkgram-suggestions");
 
-function offsetPositions(doc: Parameters<typeof DecorationSet.create>[0], start: number, end: number) {
+export function offsetPositions(doc: Parameters<typeof DecorationSet.create>[0], start: number, end: number) {
   let cursor = 0;
   let from: number | null = null;
   let to: number | null = null;
@@ -39,14 +43,22 @@ function offsetPositions(doc: Parameters<typeof DecorationSet.create>[0], start:
   return from !== null && to !== null ? { from, to } : null;
 }
 
-function createDecorations(doc: Parameters<typeof DecorationSet.create>[0], suggestions: EditorSuggestion[]) {
+function createDecorations(
+  doc: Parameters<typeof DecorationSet.create>[0],
+  suggestions: EditorSuggestion[],
+  selectedKey?: string
+) {
   const decorations = suggestions.flatMap((suggestion) => {
     const positions = offsetPositions(doc, suggestion.startOffset, suggestion.endOffset);
     if (!positions || positions.from >= positions.to) return [];
-    const className = `suggestion-${suggestion.suggestionType.toLowerCase()}`;
+    const className = [
+      `suggestion-${suggestion.suggestionType.toLowerCase()}`,
+      suggestionKey(suggestion) === selectedKey ? "suggestion-selected" : ""
+    ].filter(Boolean).join(" ");
     return [Decoration.inline(positions.from, positions.to, {
       class: className,
-      "data-suggestion-type": suggestion.suggestionType
+      "data-suggestion-type": suggestion.suggestionType,
+      "data-suggestion-key": suggestionKey(suggestion)
     })];
   });
   return DecorationSet.create(doc, decorations);
@@ -65,7 +77,9 @@ export const SuggestionDecoration = Extension.create<{ suggestions: EditorSugges
           init: (_, state) => createDecorations(state.doc, this.options.suggestions),
           apply: (transaction, oldDecorations) => {
             const meta = transaction.getMeta(suggestionPluginKey);
-            if (meta?.suggestions) return createDecorations(transaction.doc, meta.suggestions);
+            if (meta?.suggestions) {
+              return createDecorations(transaction.doc, meta.suggestions, meta.selectedSuggestionKey);
+            }
             return transaction.docChanged ? oldDecorations.map(transaction.mapping, transaction.doc) : oldDecorations;
           }
         },

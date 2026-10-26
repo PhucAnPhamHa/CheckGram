@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { TiptapEditor } from "./tiptap-editor";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { TiptapEditor, type TiptapEditorHandle } from "./tiptap-editor";
 import type { EditorSuggestion } from "./suggestion-decoration";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
@@ -17,6 +17,7 @@ export function WritingWorkspace() {
   const [suggestions, setSuggestions] = useState<EditorSuggestion[]>([]);
   const [status, setStatus] = useState("Ready to write");
   const requestId = useRef(0);
+  const editorRef = useRef<TiptapEditorHandle>(null);
 
   useEffect(() => {
     if (!text.trim()) {
@@ -48,6 +49,23 @@ export function WritingWorkspace() {
     return () => window.clearTimeout(timer);
   }, [text, tone]);
 
+  const groupedSuggestions = useMemo(() => (
+    (["Correctness", "Clarity", "Engagement", "Delivery"] as const).map((category) => ({
+      category,
+      suggestions: suggestions.filter((suggestion) => suggestion.suggestionType === category)
+    }))
+  ), [suggestions]);
+
+  function dismissSuggestion(target: EditorSuggestion) {
+    setSuggestions((current) => current.filter((suggestion) => suggestion !== target));
+  }
+
+  function acceptSuggestion(target: EditorSuggestion) {
+    if (editorRef.current?.acceptSuggestion(target)) {
+      setSuggestions((current) => current.filter((suggestion) => suggestion !== target));
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="main-pane">
@@ -70,7 +88,7 @@ export function WritingWorkspace() {
               </select>
             </label>
           </div>
-          <TiptapEditor suggestions={suggestions} tone={tone} onTextChange={setText} />
+          <TiptapEditor ref={editorRef} suggestions={suggestions} onTextChange={setText} />
           <div className="editor-footer"><span>Tip: keep writing — feedback appears as you go.</span><span>{text.length} characters</span></div>
         </div>
       </section>
@@ -85,12 +103,25 @@ export function WritingWorkspace() {
         <div className="suggestion-list">
           {suggestions.length === 0
             ? <div className="empty-state">No suggestions yet. Add a sentence with a typo, a long phrase, or a different tone to see CheckGram in action.</div>
-            : suggestions.map((suggestion, index) => (
-              <article className="suggestion-card" key={`${suggestion.startOffset}-${suggestion.endOffset}-${index}`}>
-                <div className="suggestion-card-head"><span className={`category ${categoryClass(suggestion.suggestionType)}`}>{suggestion.suggestionType}</span><span className="toolbar-label">{suggestion.source}</span></div>
-                <p className="suggestion-original">“{text.slice(suggestion.startOffset, suggestion.endOffset)}”{suggestion.replacementOptions[0] ? ` → ${suggestion.replacementOptions[0]}` : ""}</p>
-                <p className="suggestion-explanation">{suggestion.explanation}</p>
-              </article>
+            : groupedSuggestions.map(({ category, suggestions: categorySuggestions }) => categorySuggestions.length > 0 && (
+              <section className="suggestion-group" key={category}>
+                <h3 className={`suggestion-group-title ${categoryClass(category)}`}>{category}<span>{categorySuggestions.length}</span></h3>
+                {categorySuggestions.map((suggestion) => (
+                  <article
+                    className="suggestion-card"
+                    key={`${suggestion.startOffset}-${suggestion.endOffset}-${suggestion.suggestionType}`}
+                    onClick={() => editorRef.current?.focusSuggestion(suggestion)}
+                  >
+                    <div className="suggestion-card-head"><span className={`category ${categoryClass(suggestion.suggestionType)}`}>{suggestion.suggestionType}</span><span className="toolbar-label">{suggestion.source}</span></div>
+                    <p className="suggestion-original">“{text.slice(suggestion.startOffset, suggestion.endOffset)}”{suggestion.replacementOptions[0] ? ` → ${suggestion.replacementOptions[0]}` : ""}</p>
+                    <p className="suggestion-explanation">{suggestion.explanation}</p>
+                    <div className="suggestion-actions">
+                      <button type="button" className="accept-button" onClick={(event) => { event.stopPropagation(); acceptSuggestion(suggestion); }}>Accept</button>
+                      <button type="button" className="dismiss-button" onClick={(event) => { event.stopPropagation(); dismissSuggestion(suggestion); }}>Dismiss</button>
+                    </div>
+                  </article>
+                ))}
+              </section>
             ))}
         </div>
       </aside>
