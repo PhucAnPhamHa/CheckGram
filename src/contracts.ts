@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const analyzeRequestSchema = z.object({
   text: z.string().min(1).max(100_000),
-  tone: z.string().min(1).max(80).default("Neutral")
+  tone: z.string().min(1).max(80).default("Professional"),
+  previousChunks: z.array(z.string().min(1)).optional(),
+  forceRefresh: z.boolean().default(false)
 });
 
 export const rewriteRequestSchema = z.object({

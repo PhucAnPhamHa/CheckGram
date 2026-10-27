@@ -182,6 +182,8 @@ Response:
 
 Offsets are zero-based JavaScript UTF-16 offsets. `startOffset` is inclusive and `endOffset` is exclusive.
 
+Analysis is paragraph-aware. Optional `previousChunks` paragraph hashes can be sent by an editor to identify unchanged content, and `forceRefresh: true` bypasses cached payloads. The response metadata reports total, cached, processed, unchanged chunks, and execution time.
+
 ### Stream analysis
 
 ```http
