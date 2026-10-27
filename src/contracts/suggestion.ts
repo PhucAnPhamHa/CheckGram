@@ -22,7 +22,18 @@ export const suggestionStatuses = [
 
 export type SuggestionStatus = (typeof suggestionStatuses)[number];
 
-export const suggestionSources = ["languagetool", "openai", "system"] as const;
+export const suggestionSources = [
+  "languagetool",
+  "openai",
+  "anthropic",
+  "google",
+  "azure",
+  "aws-bedrock",
+  "sagemaker",
+  "groq",
+  "ollama",
+  "system",
+] as const;
 export type SuggestionSource = (typeof suggestionSources)[number];
 
 export const suggestionCategories = [

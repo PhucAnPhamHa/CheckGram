@@ -35,6 +35,10 @@ Response:
 }
 ```
 
+The analysis response also includes `meta.totalChunks`, `meta.cachedChunks`, `meta.processedChunks`, `meta.unchangedChunks`, and `meta.executionTimeMs`.
+
+The request accepts optional `previousChunks` paragraph hashes and `forceRefresh`. When `forceRefresh` is false, each paragraph is looked up independently in Redis using a SHA-256 hash of `paragraphText:tone`. Only cache misses are sent to the analysis providers, in parallel.
+
 `startOffset` is inclusive and `endOffset` is exclusive. Both are zero-based JavaScript UTF-16 offsets into the submitted `text`. The service rejects provider suggestions whose ranges are outside the source text. Overlapping suggestions are reduced to the highest-ranked result.
 
 ## Rewrite highlighted text

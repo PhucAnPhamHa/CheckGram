@@ -9,7 +9,7 @@ export interface EditorSuggestion {
   replacementOptions: string[];
   explanation: string;
   confidence?: number;
-  source: "languagetool" | "openai";
+  source: "languagetool" | "openai" | "anthropic" | "google" | "azure" | "aws-bedrock" | "sagemaker" | "groq" | "ollama";
 }
 
 export function suggestionKey(suggestion: EditorSuggestion): string {
