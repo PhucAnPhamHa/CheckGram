@@ -224,7 +224,13 @@ Content-Type: application/json
 }
 ```
 
-The response contains exactly three `{ "text": string, "explanation": string }` variations. The route returns `503` when `OPENAI_API_KEY` is not configured and `502` when the provider fails.
+The response contains exactly three `{ "text": string, "explanation": string }` variations. Select an AI backend with the optional `provider` field (`openai`, `anthropic`, `google`, `azure`, `aws-bedrock`, or `sagemaker`); each selected provider must have its corresponding environment variables configured.
+
+## Multi-provider AI and cloud connectors
+
+The backend uses `LLMFactory` and a shared adapter interface so analysis and rewrite requests can switch providers without changing route contracts. Gemini, Anthropic, Azure OpenAI, AWS Bedrock, and SageMaker adapters are included. `contextUrl` optionally uses Firecrawl to add scraped Markdown context to analysis prompts. MongoDB Atlas is available as an optional document storage connector.
+
+Copy `.env.example` and configure only the providers and connectors you use. Provider credentials remain server-side; never expose them through Next.js public environment variables. Cache keys include provider, tone, context, and paragraph text so responses cannot cross-contaminate between providers.
 
 ## Routes
 
@@ -269,7 +275,7 @@ npm run build:web   # Next.js production build
 npm test            # Node test runner
 ```
 
-The repository currently has no committed automated test files, so `npm test` is a test-runner entry point for future unit and integration coverage. During development, the API has been smoke-tested against LanguageTool and the SSE stream.
+The test suite covers paragraph offset remapping and provider-factory selection. During development, the API has also been smoke-tested against LanguageTool and the SSE stream.
 
 ## Security notes
 
